@@ -202,6 +202,72 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+
+            {/* Schedule Info */}
+            <div className="orders-table-container" style={{ marginTop: '24px' }}>
+              <div className="table-header">
+                <h2 className="table-title">Automatic Check Schedule</h2>
+              </div>
+              <div style={{ padding: '20px' }}>
+                <p style={{ color: '#666', marginBottom: '16px', fontSize: '14px' }}>
+                  Emails are sent automatically if any orders exceed the {data?.thresholdHours || 24}h threshold at these times:
+                </p>
+                <table className="orders-table">
+                  <thead>
+                    <tr>
+                      <th>Time (UK)</th>
+                      <th>Time (UTC)</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>00:55</strong></td>
+                      <td>00:55</td>
+                      <td>Overnight check</td>
+                    </tr>
+                    <tr>
+                      <td><strong>03:55</strong></td>
+                      <td>03:55</td>
+                      <td>Early morning</td>
+                    </tr>
+                    <tr>
+                      <td><strong>06:55</strong></td>
+                      <td>06:55</td>
+                      <td>Morning check</td>
+                    </tr>
+                    <tr>
+                      <td><strong>09:55</strong></td>
+                      <td>09:55</td>
+                      <td>Mid-morning</td>
+                    </tr>
+                    <tr>
+                      <td><strong>12:55</strong></td>
+                      <td>12:55</td>
+                      <td>Lunchtime check</td>
+                    </tr>
+                    <tr style={{ backgroundColor: '#fff8e6' }}>
+                      <td><strong>15:55</strong></td>
+                      <td>15:55</td>
+                      <td>⚡ Pre-4pm alert</td>
+                    </tr>
+                    <tr>
+                      <td><strong>18:55</strong></td>
+                      <td>18:55</td>
+                      <td>End of day</td>
+                    </tr>
+                    <tr>
+                      <td><strong>21:55</strong></td>
+                      <td>21:55</td>
+                      <td>Evening check</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p style={{ color: '#999', marginTop: '12px', fontSize: '12px' }}>
+                  Note: Times shown are GMT. During BST (British Summer Time), add 1 hour.
+                </p>
+              </div>
+            </div>
           </>
         ) : null}
       </main>
