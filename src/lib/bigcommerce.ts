@@ -29,7 +29,7 @@ export async function fetchAwaitingShipmentOrders(): Promise<OrderWithAge[]> {
     }
 
     const response = await fetch(
-        `https://api.bigcommerce.com/stores/${STORE_HASH}/v2/orders?status_id=9&limit=250`,
+        `https://api.bigcommerce.com/stores/${STORE_HASH}/v2/orders?status_id=11&limit=250`,
         {
             headers: {
                 'X-Auth-Token': ACCESS_TOKEN,
