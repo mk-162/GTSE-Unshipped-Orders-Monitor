@@ -4,31 +4,31 @@ import { OrderWithAge } from './bigcommerce';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendAlertEmail(overdueOrders: OrderWithAge[]): Promise<boolean> {
-    const alertEmail = process.env.ALERT_EMAIL;
+  const alertEmail = process.env.ALERT_EMAIL;
 
-    if (!alertEmail) {
-        console.error('ALERT_EMAIL not configured');
-        return false;
-    }
+  if (!alertEmail) {
+    console.error('ALERT_EMAIL not configured');
+    return false;
+  }
 
-    if (overdueOrders.length === 0) {
-        return true; // No alert needed
-    }
+  if (overdueOrders.length === 0) {
+    return true; // No alert needed
+  }
 
-    const orderRows = overdueOrders
-        .map(
-            (order) =>
-                `<tr>
+  const orderRows = overdueOrders
+    .map(
+      (order) =>
+        `<tr>
           <td style="padding: 12px; border-bottom: 1px solid #eee;">#${order.id}</td>
           <td style="padding: 12px; border-bottom: 1px solid #eee;">${order.billing_address?.company || `${order.billing_address?.first_name} ${order.billing_address?.last_name}`}</td>
           <td style="padding: 12px; border-bottom: 1px solid #eee;">${new Date(order.date_created).toLocaleDateString('en-GB')}</td>
           <td style="padding: 12px; border-bottom: 1px solid #eee; color: #E8A33C; font-weight: bold;">${order.hours_open}h</td>
           <td style="padding: 12px; border-bottom: 1px solid #eee;">£${order.total_inc_tax}</td>
         </tr>`
-        )
-        .join('');
+    )
+    .join('');
 
-    const html = `
+  const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto;">
       <div style="background: #4A4A4A; padding: 20px; text-align: center;">
         <img src="https://cdn11.bigcommerce.com/s-v8oj4rfmzr/images/stencil/250x100/gtse_logo_1612977822__44777.original.png" alt="GTSE" style="height: 40px;">
@@ -63,16 +63,16 @@ export async function sendAlertEmail(overdueOrders: OrderWithAge[]): Promise<boo
     </div>
   `;
 
-    try {
-        await resend.emails.send({
-            from: 'GTSE Orders <onboarding@resend.dev>',
-            to: alertEmail,
-            subject: `⚠️ ${overdueOrders.length} Unshipped Order${overdueOrders.length > 1 ? 's' : ''} Require Attention`,
-            html,
-        });
-        return true;
-    } catch (error) {
-        console.error('Failed to send email:', error);
-        return false;
-    }
+  try {
+    await resend.emails.send({
+      from: 'GTSE Orders <noreply@gtsegroup.com>',
+      to: alertEmail,
+      subject: `⚠️ ${overdueOrders.length} Unshipped Order${overdueOrders.length > 1 ? 's' : ''} Require Attention`,
+      html,
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    return false;
+  }
 }
