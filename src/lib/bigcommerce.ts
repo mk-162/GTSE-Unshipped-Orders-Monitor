@@ -75,3 +75,42 @@ export async function getOrdersExceedingThreshold(): Promise<OrderWithAge[]> {
     const orders = await fetchAwaitingShipmentOrders();
     return orders.filter((order) => order.is_overdue);
 }
+
+export async function fetchRecentOrders(): Promise<OrderWithAge[]> {
+    if (!STORE_HASH || !ACCESS_TOKEN) {
+        throw new Error('BigCommerce credentials not configured');
+    }
+
+    const response = await fetch(
+        `https://api.bigcommerce.com/stores/${STORE_HASH}/v2/orders?limit=20&sort=date_created:desc`,
+        {
+            headers: {
+                'X-Auth-Token': ACCESS_TOKEN,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            cache: 'no-store',
+        }
+    );
+
+    if (response.status === 204) return [];
+    if (!response.ok) throw new Error(`BigCommerce API error: ${response.status}`);
+
+    const text = await response.text();
+    if (!text || text.trim() === '') return [];
+
+    const orders: Order[] = JSON.parse(text);
+    const thresholdHours = parseInt(process.env.THRESHOLD_HOURS || '24', 10);
+
+    return orders.map((order) => {
+        const createdAt = new Date(order.date_created);
+        const now = new Date();
+        const hoursOpen = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60));
+
+        return {
+            ...order,
+            hours_open: hoursOpen,
+            is_overdue: hoursOpen >= thresholdHours,
+        };
+    });
+}

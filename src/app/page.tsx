@@ -6,6 +6,7 @@ interface Order {
   id: number;
   date_created: string;
   total_inc_tax: string;
+  status: string;
   hours_open: number;
   is_overdue: boolean;
   billing_address: {
@@ -18,6 +19,7 @@ interface Order {
 
 interface OrdersResponse {
   orders: Order[];
+  recentOrders?: Order[];
   total: number;
   overdue: number;
   thresholdHours: number;
@@ -30,6 +32,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'awaiting' | 'recent'>('awaiting');
 
   const storeHash = process.env.NEXT_PUBLIC_BIGCOMMERCE_STORE_HASH || 'usnceuurb6';
 
@@ -64,6 +67,14 @@ export default function Dashboard() {
     if (hours >= threshold * 2) return 'hours-badge danger';
     if (hours >= threshold) return 'hours-badge warning';
     return 'hours-badge ok';
+  };
+
+  const getStatusBadgeClass = (status: string): string => {
+    const s = status.toLowerCase();
+    if (s === 'shipped' || s === 'completed') return 'status-badge success';
+    if (s === 'cancelled' || s === 'refunded') return 'status-badge neutral';
+    if (s.includes('awaiting shipment') || s.includes('awaiting fulfillment')) return 'status-badge warning';
+    return 'status-badge info';
   };
 
   const formatDate = (dateString: string): string => {
@@ -120,7 +131,20 @@ export default function Dashboard() {
 
             <div className="orders-table-container">
               <div className="table-header">
-                <h2 className="table-title">Orders Awaiting Shipment</h2>
+                <div>
+                  <button
+                    className={`tab-btn ${activeTab === 'awaiting' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('awaiting')}
+                  >
+                    Awaiting Shipment
+                  </button>
+                  <button
+                    className={`tab-btn ${activeTab === 'recent' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('recent')}
+                  >
+                    Recent Orders
+                  </button>
+                </div>
                 <button
                   className="refresh-btn"
                   onClick={() => fetchOrders(true)}
@@ -138,62 +162,118 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {data.orders.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-state-icon">✓</div>
-                  <div className="empty-state-text">
-                    No orders awaiting shipment
+              {activeTab === 'awaiting' ? (
+                /* Awaiting Shipment View */
+                data.orders.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-state-icon">✓</div>
+                    <div className="empty-state-text">
+                      No orders awaiting shipment
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <table className="orders-table">
-                  <thead>
-                    <tr>
-                      <th>Order</th>
-                      <th>Customer</th>
-                      <th>Date Placed</th>
-                      <th>Hours Open</th>
-                      <th>Total</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.orders.map((order) => (
-                      <tr key={order.id}>
-                        <td>
-                          <span className="order-id">#{order.id}</span>
-                        </td>
-                        <td>
-                          {order.billing_address?.company ||
-                            `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() ||
-                            'N/A'}
-                        </td>
-                        <td>{formatDate(order.date_created)}</td>
-                        <td>
-                          <span
-                            className={getHoursBadgeClass(
-                              order.hours_open,
-                              data.thresholdHours
-                            )}
-                          >
-                            {order.hours_open}h
-                          </span>
-                        </td>
-                        <td>£{parseFloat(order.total_inc_tax).toFixed(2)}</td>
-                        <td>
-                          <a
-                            href={`https://store-${storeHash}.mybigcommerce.com/manage/orders/${order.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="view-link"
-                          >
-                            View →
-                          </a>
-                        </td>
+                ) : (
+                  <table className="orders-table">
+                    <thead>
+                      <tr>
+                        <th>Order</th>
+                        <th>Customer</th>
+                        <th>Date Placed</th>
+                        <th>Hours Open</th>
+                        <th>Total</th>
+                        <th>Action</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {data.orders.map((order) => (
+                        <tr key={order.id}>
+                          <td>
+                            <span className="order-id">#{order.id}</span>
+                          </td>
+                          <td>
+                            {order.billing_address?.company ||
+                              `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() ||
+                              'N/A'}
+                          </td>
+                          <td>{formatDate(order.date_created)}</td>
+                          <td>
+                            <span
+                              className={getHoursBadgeClass(
+                                order.hours_open,
+                                data.thresholdHours
+                              )}
+                            >
+                              {order.hours_open}h
+                            </span>
+                          </td>
+                          <td>£{parseFloat(order.total_inc_tax).toFixed(2)}</td>
+                          <td>
+                            <a
+                              href={`https://store-${storeHash}.mybigcommerce.com/manage/orders/${order.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="view-link"
+                            >
+                              View →
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
+              ) : (
+                /* Recent Orders View */
+                !data.recentOrders || data.recentOrders.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-state-text">
+                      No recent orders found
+                    </div>
+                  </div>
+                ) : (
+                  <table className="orders-table">
+                    <thead>
+                      <tr>
+                        <th>Order</th>
+                        <th>Status</th>
+                        <th>Customer</th>
+                        <th>Date Placed</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.recentOrders.map((order) => (
+                        <tr key={order.id}>
+                          <td>
+                            <span className="order-id">#{order.id}</span>
+                          </td>
+                          <td>
+                            <span className={getStatusBadgeClass(order.status)}>
+                              {order.status}
+                            </span>
+                          </td>
+                          <td>
+                            {order.billing_address?.company ||
+                              `${order.billing_address?.first_name || ''} ${order.billing_address?.last_name || ''}`.trim() ||
+                              'N/A'}
+                          </td>
+                          <td>{formatDate(order.date_created)}</td>
+                          <td>£{parseFloat(order.total_inc_tax).toFixed(2)}</td>
+                          <td>
+                            <a
+                              href={`https://store-${storeHash}.mybigcommerce.com/manage/orders/${order.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="view-link"
+                            >
+                              View →
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )
               )}
 
               {data.lastChecked && (

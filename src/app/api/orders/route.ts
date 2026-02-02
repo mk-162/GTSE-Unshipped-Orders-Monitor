@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
-import { fetchAwaitingShipmentOrders } from '@/lib/bigcommerce';
+import { fetchAwaitingShipmentOrders, fetchRecentOrders } from '@/lib/bigcommerce';
 
 export async function GET() {
     try {
-        const orders = await fetchAwaitingShipmentOrders();
+        const [orders, recentOrders] = await Promise.all([
+            fetchAwaitingShipmentOrders(),
+            fetchRecentOrders()
+        ]);
 
-        // Sort by hours_open descending (most overdue first)
+        // Sort overdue by hours_open descending (most overdue first)
         orders.sort((a, b) => b.hours_open - a.hours_open);
 
         const thresholdHours = parseInt(process.env.THRESHOLD_HOURS || '24', 10);
@@ -13,6 +16,7 @@ export async function GET() {
 
         return NextResponse.json({
             orders,
+            recentOrders,
             total: orders.length,
             overdue: overdueCount,
             thresholdHours,
