@@ -4,10 +4,5 @@
       "path": "/api/check",
       "schedule": "55 */3 * * *"
     }
-  ],
-  "deploymentProtection": {
-    "production": {
-      "standard": "all"
-    }
-  }
+  ]
 }
