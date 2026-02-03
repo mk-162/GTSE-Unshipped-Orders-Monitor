@@ -65,7 +65,7 @@ export async function sendAlertEmail(overdueOrders: OrderWithAge[]): Promise<boo
 
   try {
     await resend.emails.send({
-      from: 'GTSE Orders <noreply@gtsegroup.com>',
+      from: 'GTSE Orders <onboarding@resend.dev>',
       to: alertEmail,
       subject: `⚠️ ${overdueOrders.length} Unshipped Order${overdueOrders.length > 1 ? 's' : ''} Require Attention`,
       html,
