@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GTSE Unshipped Orders Monitor
 
-## Getting Started
+Dashboard and alert system for tracking unshipped BigCommerce orders.
 
-First, run the development server:
+## Features
+
+- **Live Dashboard** — View all orders awaiting shipment
+- **Hours Tracking** — See how long each order has been open
+- **Overdue Alerts** — Orders exceeding threshold highlighted in warning colors
+- **Email Notifications** — Automatic alerts via Resend when orders are overdue
+- **Scheduled Checks** — Daily cron job at 15:55 UTC (pre-4pm UK)
+
+## Screenshot
+
+The dashboard displays:
+- Total orders awaiting shipment
+- Count of orders over threshold
+- Configurable threshold (default: 24 hours)
+- Direct links to BigCommerce order management
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `BIGCOMMERCE_STORE_HASH` | ✅ | Store hash (e.g., `usnceuurb6`) |
+| `BIGCOMMERCE_ACCESS_TOKEN` | ✅ | BigCommerce API access token |
+| `THRESHOLD_HOURS` | ❌ | Hours before overdue (default: 24) |
+| `ALERT_EMAIL` | ✅ | Email address for alerts |
+| `RESEND_API_KEY` | ✅ | Resend API key for sending emails |
+| `CRON_SECRET` | ❌ | Optional auth for cron endpoint |
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Deployed on Vercel with automatic deploys from `main` branch.
 
-## Learn More
+### Cron Schedule
 
-To learn more about Next.js, take a look at the following resources:
+```json
+{
+  "crons": [
+    {
+      "path": "/api/check",
+      "schedule": "55 15 * * *"
+    }
+  ]
+}
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Runs daily at 15:55 UTC — alerts sent if any orders exceed threshold.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tech Stack
 
-## Deploy on Vercel
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- Vercel KV (caching)
+- Resend (email)
+- BigCommerce V2 API
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API Endpoints
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/orders` | Fetch orders for dashboard |
+| `/api/check` | Cron: check overdue orders, send alerts |
+| `/api/login` | User authentication |
+
+---
+
+Built for GTSE warehouse operations.
