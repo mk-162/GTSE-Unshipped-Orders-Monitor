@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getOrdersExceedingThreshold } from '@/lib/bigcommerce';
-import { sendAlertEmail } from '@/lib/email';
+import { getOrdersExceedingThreshold, getIncompleteOrdersExceedingMinutes, fetchAwaitingShipmentOrders, fetchRecentOrders, fetchIncompleteOrders, StoreRegion } from '@/lib/bigcommerce';
+import { sendAlertEmail, sendIncompleteOrdersEmail, sendCustomerCommentsEmail } from '@/lib/email';
 
-// This endpoint is called by Vercel Cron every 3 hours
+const STORES: StoreRegion[] = ['uk', 'us'];
+
+// This endpoint is called by Vercel Cron
 export async function GET(request: Request) {
     // Verify cron secret in production (optional but recommended)
     const authHeader = request.headers.get('authorization');
@@ -11,25 +13,60 @@ export async function GET(request: Request) {
     }
 
     try {
-        const overdueOrders = await getOrdersExceedingThreshold();
+        const results = [];
 
-        if (overdueOrders.length === 0) {
-            console.log('No overdue orders found');
-            return NextResponse.json({
-                success: true,
-                message: 'No overdue orders',
-                checked: new Date().toISOString(),
+        for (const store of STORES) {
+            const [overdueOrders, incompleteOrders, awaitingOrders, recentOrders, allIncomplete] = await Promise.all([
+                getOrdersExceedingThreshold(store),
+                getIncompleteOrdersExceedingMinutes(store, 15),
+                fetchAwaitingShipmentOrders(store),
+                fetchRecentOrders(store),
+                fetchIncompleteOrders(store)
+            ]);
+
+            // Find orders with customer comments
+            const allOrders = [...awaitingOrders, ...recentOrders, ...allIncomplete];
+            const seenIds = new Set<number>();
+            const ordersWithComments = allOrders.filter(o => {
+                if (seenIds.has(o.id)) return false;
+                seenIds.add(o.id);
+                return o.customer_message && o.customer_message.trim() !== '';
+            });
+
+            const storeLabel = store.toUpperCase();
+            let overdueEmailSent = false;
+            let incompleteEmailSent = false;
+            let commentsEmailSent = false;
+
+            if (overdueOrders.length > 0) {
+                console.log(`[${storeLabel}] Found ${overdueOrders.length} overdue orders, sending alert...`);
+                overdueEmailSent = await sendAlertEmail(overdueOrders, store);
+            }
+
+            if (incompleteOrders.length > 0) {
+                console.log(`[${storeLabel}] Found ${incompleteOrders.length} incomplete orders (15+ min), sending alert...`);
+                incompleteEmailSent = await sendIncompleteOrdersEmail(incompleteOrders, store);
+            }
+
+            if (ordersWithComments.length > 0) {
+                console.log(`[${storeLabel}] Found ${ordersWithComments.length} orders with customer comments, sending alert...`);
+                commentsEmailSent = await sendCustomerCommentsEmail(ordersWithComments, store);
+            }
+
+            results.push({
+                store,
+                overdueOrders: overdueOrders.length,
+                incompleteOrders: incompleteOrders.length,
+                ordersWithComments: ordersWithComments.length,
+                overdueEmailSent,
+                incompleteEmailSent,
+                commentsEmailSent,
             });
         }
 
-        console.log(`Found ${overdueOrders.length} overdue orders, sending alert...`);
-
-        const emailSent = await sendAlertEmail(overdueOrders);
-
         return NextResponse.json({
             success: true,
-            overdueOrders: overdueOrders.length,
-            emailSent,
+            results,
             checked: new Date().toISOString(),
         });
     } catch (error) {
